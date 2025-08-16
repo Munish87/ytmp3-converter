@@ -1,24 +1,11 @@
 {
   "version": 2,
   "builds": [
-    {
-      "src": "api/convert.js",
-      "use": "@vercel/node@3.0.0",
-      "config": {
-        "memory": 2048,
-        "maxDuration": 10
-      }
-    }
+    { "src": "index.html", "use": "@vercel/static" },
+    { "src": "api/convert.js", "use": "@vercel/node" }
   ],
   "routes": [
-    {
-      "src": "/api/convert",
-      "dest": "api/convert.js",
-      "methods": ["POST"]
-    },
-    {
-      "src": "/",
-      "dest": "index.html"
-    }
+    { "src": "/api/.*", "dest": "/api/convert.js" },
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
