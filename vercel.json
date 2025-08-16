@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    { "source": "/api/convert", "destination": "/api/convert.js" }
+  ],
+  "functions": {
+    "api/convert.js": {
+      "memory": 2048,
+      "maxDuration": 10,
+      "nodeVersion": "18.x"
+    }
+  }
+}
