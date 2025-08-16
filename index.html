@@ -5,8 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>YTMP3 - YouTube to MP3 Converter</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    // Update the convertVideo() function catch block:
+catch (error) {
+    console.error('Error:', error);
+    
+    // Special handling for 410 errors
+    if (error.message.includes('410') || (errorData && errorData.error.includes('YouTube has changed'))) {
+        showError('YouTube has changed their API. We are working on a fix. Please try again later.');
+    } else {
+        showError(error.message || 'Conversion failed. Please try a different video.');
+    }
+}
     <style>
-        * {
+        *
+        
+         {
             margin: 0;
             padding: 0;
             box-sizing: border-box;

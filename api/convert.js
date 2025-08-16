@@ -2,6 +2,7 @@ import ytdl from 'ytdl-core';
 import ffmpeg from 'fluent-ffmpeg';
 import rateLimit from 'express-rate-limit';
 import ffmpegStatic from 'ffmpeg-static';
+import { PassThrough } from 'stream';
 
 // Set ffmpeg path from ffmpeg-static
 ffmpeg.setFfmpegPath(ffmpegStatic);
@@ -12,16 +13,24 @@ const limiter = rateLimit({
   max: 5, // limit each IP to 5 requests per window
   message: 'Too many conversion requests, please try again later',
   keyGenerator: (req) => {
-    return (
-      req.headers['x-real-ip'] ||
-      req.headers['x-forwarded-for'] ||
-      req.connection.remoteAddress
-    );
+    return req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
   }
 });
 
-// ✅ Vercel API route
-export default async function handler(req, res) {
+// Fix for 410 error - use custom request options
+const requestOptions = {
+  headers: {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'DNT': '1',
+    'Connection': 'keep-alive',
+    'Upgrade-Insecure-Requests': '1'
+  }
+};
+
+export default async (req, res) => {
   // Apply rate limiter
   limiter(req, res, async () => {
     if (req.method !== 'POST') {
@@ -36,56 +45,59 @@ export default async function handler(req, res) {
 
     try {
       // Validate YouTube URL
-      if (!ytdl.validateURL(url)) {
+      const isValid = ytdl.validateURL(url);
+      if (!isValid) {
         return res.status(400).json({ error: 'Invalid YouTube URL' });
       }
 
-      // Get video info
-      const info = await ytdl.getInfo(url);
+      // Get video info with custom options to avoid 410 error
+      const info = await ytdl.getInfo(url, { requestOptions });
       const videoDetails = info.videoDetails;
       const title = videoDetails.title;
-      const duration = parseInt(videoDetails.lengthSeconds, 10);
+      const duration = parseInt(videoDetails.lengthSeconds);
 
       // Add video duration limit (5 minutes max for free tier)
-      const MAX_DURATION = 300; // 5 minutes
+      const MAX_DURATION = 300; // 5 minutes in seconds
       if (duration > MAX_DURATION) {
-        return res.status(400).json({
-          error: 'Videos longer than 5 minutes are not supported on the free plan'
+        return res.status(400).json({ 
+          error: 'Videos longer than 5 minutes are not supported on the free plan' 
         });
       }
 
-      // Create a pass-through stream
+      // Create a pass-through stream for more efficient processing
       const audioStream = ytdl(url, {
         quality: 'highestaudio',
-        highWaterMark: 1 << 25 // 32MB buffer
+        highWaterMark: 1 << 25, // 32MB buffer
+        requestOptions // Use our custom headers to avoid 410
       });
 
-      // Convert to MP3
+      // Create converter stream
       const converter = ffmpeg(audioStream)
         .audioBitrate(128)
         .toFormat('mp3')
-        .on('error', (error) => {
+        .on('error', error => {
           console.error('FFmpeg error:', error);
-          if (!res.headersSent) {
-            res.status(500).json({ error: 'Conversion failed' });
-          }
+          res.status(500).json({ error: 'Conversion failed' });
         });
 
       // Stream directly to response
       res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.mp3"`
-      );
-
+      res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.mp3"`);
+      
       converter.pipe(res);
+
     } catch (error) {
       console.error('Conversion error:', error);
-      if (!res.headersSent) {
-        res
-          .status(500)
-          .json({ error: 'Conversion failed', details: error.message });
+      
+      // Special handling for 410 error
+      if (error.message.includes('410') || error.statusCode === 410) {
+        return res.status(410).json({ 
+          error: 'YouTube has changed their API. Please update the converter or try again later.',
+          details: error.message 
+        });
       }
+      
+      res.status(500).json({ error: 'Conversion failed', details: error.message });
     }
   });
-}
+};

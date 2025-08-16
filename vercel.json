@@ -1,1 +1,24 @@
-{}
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/convert.js",
+      "use": "@vercel/node@3.0.0",
+      "config": {
+        "memory": 2048,
+        "maxDuration": 10
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/api/convert",
+      "dest": "api/convert.js",
+      "methods": ["POST"]
+    },
+    {
+      "src": "/",
+      "dest": "index.html"
+    }
+  ]
+}
