@@ -1,7 +1,5 @@
 {
   "functions": {
-    "api/convert.js": {
-      "runtime": "nodejs"
-    }
+    "api/convert.js": {}
   }
 }
