@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>YTMP3 Converter - YouTube to MP3</title>
+    <title>YTMP3 - YouTube to MP3 Converter</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -407,96 +407,6 @@
             }
         }
         
-        /* Result Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 1000;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal-content {
-            background: #1a1a2e;
-            border-radius: 20px;
-            padding: 40px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        
-        .close-modal {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            color: #aaa;
-            font-size: 24px;
-            cursor: pointer;
-            transition: color 0.3s;
-        }
-        
-        .close-modal:hover {
-            color: var(--primary);
-        }
-        
-        .modal-thumbnail {
-            width: 100%;
-            height: 200px;
-            background: linear-gradient(135deg, #2d3436 0%, #000000 100%);
-            border-radius: 10px;
-            margin: 20px auto;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            overflow: hidden;
-        }
-        
-        .modal-thumbnail img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .track-info {
-            text-align: left;
-            margin-bottom: 30px;
-        }
-        
-        .track-info h3 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
-        
-        .track-info p {
-            color: #aaa;
-            margin-bottom: 5px;
-        }
-        
-        .download-btn {
-            display: inline-block;
-            padding: 15px 40px;
-            background: linear-gradient(90deg, var(--primary), var(--secondary));
-            color: white;
-            text-decoration: none;
-            border-radius: 50px;
-            font-weight: 600;
-            font-size: 18px;
-            transition: transform 0.3s, box-shadow 0.3s;
-        }
-        
-        .download-btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(255, 77, 77, 0.4);
-        }
-        
         /* Loading animation */
         .loader {
             display: none;
@@ -540,11 +450,41 @@
         /* Alert */
         .alert {
             padding: 15px;
-            background: rgba(255, 77, 77, 0.1);
             border-radius: 8px;
             margin: 15px 0;
             display: none;
-            border-left: 4px solid var(--primary);
+            border-left: 4px solid;
+            position: relative;
+        }
+        
+        .alert-error {
+            background: rgba(255, 77, 77, 0.1);
+            border-left-color: #ff4d4d;
+        }
+        
+        .alert-success {
+            background: rgba(46, 204, 113, 0.1);
+            border-left-color: #2ecc71;
+        }
+        
+        .alert-close {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: none;
+            border: none;
+            color: inherit;
+            cursor: pointer;
+        }
+        
+        /* Conversion Info */
+        .conversion-info {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
         }
     </style>
 </head>
@@ -579,8 +519,14 @@
                 <button id="convert-btn">Convert</button>
             </div>
             
-            <div class="alert" id="alert">
-                <i class="fas fa-exclamation-circle"></i> <span id="alert-text">Please enter a valid YouTube URL</span>
+            <div class="alert alert-error" id="error-alert">
+                <i class="fas fa-exclamation-circle"></i> <span id="error-text">Please enter a valid YouTube URL</span>
+                <button class="alert-close" id="close-error">&times;</button>
+            </div>
+            
+            <div class="alert alert-success" id="success-alert">
+                <i class="fas fa-check-circle"></i> <span id="success-text">Conversion successful! Download starting...</span>
+                <button class="alert-close" id="close-success">&times;</button>
             </div>
             
             <div class="loader" id="loader">
@@ -589,6 +535,11 @@
                 <div class="progress-container">
                     <div class="progress-bar" id="progress-bar"></div>
                 </div>
+            </div>
+            
+            <div class="conversion-info" id="conversion-info">
+                <p><i class="fas fa-music"></i> Converting: <span id="video-title">Unknown Title</span></p>
+                <p><i class="fas fa-clock"></i> Duration: <span id="video-duration">0:00</span></p>
             </div>
             
             <div class="converter-info">
@@ -664,34 +615,10 @@
                 <a href="#">Contact Us</a>
             </div>
             <p class="copyright">© 2023 YTMP3 Converter. All rights reserved.</p>
+            <p class="disclaimer" style="margin-top: 20px; color: #777; font-size: 14px;">
+                Disclaimer: This tool is for personal use only. Downloading copyrighted material may violate copyright laws.
+            </p>
         </footer>
-    </div>
-    
-    <!-- Result Modal -->
-    <div class="modal" id="result-modal">
-        <div class="modal-content">
-            <span class="close-modal" id="close-modal">&times;</span>
-            <h2>Your MP3 is Ready!</h2>
-            
-            <div class="modal-thumbnail">
-                <img id="thumbnail-img" src="" alt="Video thumbnail">
-                <div id="thumbnail-placeholder">
-                    <i class="fas fa-music" style="font-size: 80px; color: #555;"></i>
-                </div>
-            </div>
-            
-            <div class="track-info">
-                <h3 id="track-title">Song Title</h3>
-                <p id="track-artist">Artist Name</p>
-                <p id="track-duration">Duration: 3:45</p>
-                <p id="track-quality">Quality: 320kbps</p>
-                <p id="track-size">Size: 8.7MB</p>
-            </div>
-            
-            <a href="#" class="download-btn" id="download-btn" download="youtube-audio.mp3">
-                <i class="fas fa-download"></i> Download MP3
-            </a>
-        </div>
     </div>
     
     <script>
@@ -701,18 +628,13 @@
         const loader = document.getElementById('loader');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
-        const alertBox = document.getElementById('alert');
-        const alertText = document.getElementById('alert-text');
-        const resultModal = document.getElementById('result-modal');
-        const closeModal = document.getElementById('close-modal');
-        const thumbnailImg = document.getElementById('thumbnail-img');
-        const thumbnailPlaceholder = document.getElementById('thumbnail-placeholder');
-        const trackTitle = document.getElementById('track-title');
-        const trackArtist = document.getElementById('track-artist');
-        const trackDuration = document.getElementById('track-duration');
-        const trackQuality = document.getElementById('track-quality');
-        const trackSize = document.getElementById('track-size');
-        const downloadBtn = document.getElementById('download-btn');
+        const errorAlert = document.getElementById('error-alert');
+        const errorText = document.getElementById('error-text');
+        const successAlert = document.getElementById('success-alert');
+        const successText = document.getElementById('success-text');
+        const conversionInfo = document.getElementById('conversion-info');
+        const videoTitle = document.getElementById('video-title');
+        const videoDuration = document.getElementById('video-duration');
         
         // YouTube URL validation regex
         const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.?be)\/.+$/;
@@ -722,115 +644,132 @@
         
         // Event Listeners
         convertBtn.addEventListener('click', convertVideo);
-        closeModal.addEventListener('click', () => {
-            resultModal.style.display = 'none';
+        document.getElementById('close-error').addEventListener('click', () => {
+            errorAlert.style.display = 'none';
         });
-        
-        // Close modal when clicking outside
-        window.addEventListener('click', (e) => {
-            if (e.target === resultModal) {
-                resultModal.style.display = 'none';
-            }
+        document.getElementById('close-success').addEventListener('click', () => {
+            successAlert.style.display = 'none';
         });
         
         // Conversion function
         async function convertVideo() {
             const url = youtubeUrlInput.value.trim();
             
-            // Hide alert
-            alertBox.style.display = 'none';
+            // Hide alerts
+            errorAlert.style.display = 'none';
+            successAlert.style.display = 'none';
             
             if (!url) {
-                showAlert("Please enter a YouTube URL");
+                showError("Please enter a YouTube URL");
                 return;
             }
             
             if (!youtubeRegex.test(url)) {
-                showAlert("Please enter a valid YouTube URL");
+                showError("Please enter a valid YouTube URL");
                 return;
             }
             
             // Show loader
             loader.style.display = 'block';
+            conversionInfo.style.display = 'block';
+            
+            // Reset progress bar
+            progressBar.style.width = '0%';
+            progressText.textContent = 'Starting conversion...';
+            videoTitle.textContent = 'Loading...';
+            videoDuration.textContent = '0:00';
             
             try {
-                // Reset progress bar
-                progressBar.style.width = '0%';
-                
-                // Simulate conversion progress
+                // Update progress bar to show activity
                 let progress = 0;
                 const progressInterval = setInterval(() => {
-                    progress += Math.floor(Math.random() * 10) + 5;
-                    if (progress >= 100) {
-                        progress = 100;
-                        clearInterval(progressInterval);
-                    }
-                    progressBar.style.width = `${progress}%`;
-                    progressText.textContent = getProgressText(progress);
+                    progress = Math.min(progress + Math.random() * 5, 95);
+                    updateProgressBar(progress);
                 }, 200);
                 
-                // Call serverless function for conversion
+                // Call serverless function
                 const response = await fetch(CONVERT_ENDPOINT, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ url })
                 });
                 
+                // Stop the progress interval
+                clearInterval(progressInterval);
+                
                 if (!response.ok) {
-                    throw new Error('Conversion failed on server');
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || 'Conversion failed');
                 }
                 
-                const data = await response.json();
+                // Update progress to 100%
+                updateProgressBar(100);
                 
-                // Update modal with video info
-                trackTitle.textContent = data.title || 'Unknown Title';
-                trackArtist.textContent = data.artist || 'Unknown Artist';
-                trackDuration.textContent = `Duration: ${data.duration || '0:00'}`;
-                trackQuality.textContent = `Quality: ${data.quality || '128kbps'}`;
-                trackSize.textContent = `Size: ${data.size || 'N/A'}`;
+                // Get filename from Content-Disposition header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'youtube-audio.mp3';
                 
-                // Set thumbnail
-                if (data.thumbnail) {
-                    thumbnailImg.src = data.thumbnail;
-                    thumbnailImg.style.display = 'block';
-                    thumbnailPlaceholder.style.display = 'none';
-                } else {
-                    thumbnailImg.style.display = 'none';
-                    thumbnailPlaceholder.style.display = 'flex';
+                if (contentDisposition) {
+                    const filenameMatch = contentDisposition.match(/filename="(.+)"/);
+                    if (filenameMatch) filename = filenameMatch[1];
                 }
                 
-                // Set download button
-                if (data.downloadUrl) {
-                    downloadBtn.href = data.downloadUrl;
-                    downloadBtn.download = data.filename || 'youtube-audio.mp3';
-                }
+                // Create blob from response
+                const blob = await response.blob();
+                const blobUrl = URL.createObjectURL(blob);
                 
-                // Hide loader after a moment
+                // Create download link
+                const a = document.createElement('a');
+                a.href = blobUrl;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                // Clean up
+                URL.revokeObjectURL(blobUrl);
+                
+                // Show success message
+                showSuccess(`Download started: ${filename}`);
+                
+            } catch (error) {
+                console.error('Error:', error);
+                showError(error.message);
+            } finally {
+                // Hide loader after a delay to show completion
                 setTimeout(() => {
                     loader.style.display = 'none';
-                    resultModal.style.display = 'flex';
-                }, 500);
-            } catch (error) {
-                console.error('Conversion error:', error);
-                loader.style.display = 'none';
-                showAlert(error.message || 'Failed to convert video');
+                }, 1000);
             }
         }
         
-        // Show alert message
-        function showAlert(message) {
-            alertText.textContent = message;
-            alertBox.style.display = 'flex';
+        // Show error message
+        function showError(message) {
+            errorText.textContent = message;
+            errorAlert.style.display = 'flex';
+            loader.style.display = 'none';
+        }
+        
+        // Show success message
+        function showSuccess(message) {
+            successText.textContent = message;
+            successAlert.style.display = 'flex';
+        }
+        
+        // Update progress bar and text
+        function updateProgressBar(percent) {
+            progressBar.style.width = `${percent}%`;
+            progressText.textContent = getProgressText(percent);
         }
         
         // Get progress text based on percentage
         function getProgressText(progress) {
-            if (progress < 30) {
-                return "Analyzing video...";
+            if (progress < 10) {
+                return "Initializing...";
+            } else if (progress < 30) {
+                return "Retrieving video info...";
             } else if (progress < 60) {
-                return "Extracting audio...";
+                return "Processing audio...";
             } else if (progress < 90) {
                 return "Converting to MP3...";
             } else {
@@ -846,9 +785,24 @@
             }
         });
         
-        // Close alert when clicking it
-        alertBox.addEventListener('click', () => {
-            alertBox.style.display = 'none';
+        // Sample video data for info display
+        const sampleVideos = [
+            { title: "Blinding Lights", duration: "3:20" },
+            { title: "Shape of You", duration: "3:53" },
+            { title: "Dance Monkey", duration: "3:29" }
+        ];
+        
+        // Show sample video info when user types
+        youtubeUrlInput.addEventListener('input', () => {
+            if (youtubeUrlInput.value.length > 30) {
+                const randomIndex = Math.floor(Math.random() * sampleVideos.length);
+                const video = sampleVideos[randomIndex];
+                videoTitle.textContent = video.title;
+                videoDuration.textContent = video.duration;
+                conversionInfo.style.display = 'block';
+            } else {
+                conversionInfo.style.display = 'none';
+            }
         });
     </script>
 </body>
