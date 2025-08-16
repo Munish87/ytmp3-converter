@@ -12,11 +12,16 @@ const limiter = rateLimit({
   max: 5, // limit each IP to 5 requests per window
   message: 'Too many conversion requests, please try again later',
   keyGenerator: (req) => {
-    return req.headers['x-real-ip'] || req.headers['x-forwarded-for'] || req.connection.remoteAddress;
+    return (
+      req.headers['x-real-ip'] ||
+      req.headers['x-forwarded-for'] ||
+      req.connection.remoteAddress
+    );
   }
 });
 
-export default async (req, res) => {
+// ✅ Vercel API route
+export default async function handler(req, res) {
   // Apply rate limiter
   limiter(req, res, async () => {
     if (req.method !== 'POST') {
@@ -31,8 +36,7 @@ export default async (req, res) => {
 
     try {
       // Validate YouTube URL
-      const isValid = ytdl.validateURL(url);
-      if (!isValid) {
+      if (!ytdl.validateURL(url)) {
         return res.status(400).json({ error: 'Invalid YouTube URL' });
       }
 
@@ -40,40 +44,48 @@ export default async (req, res) => {
       const info = await ytdl.getInfo(url);
       const videoDetails = info.videoDetails;
       const title = videoDetails.title;
-      const duration = parseInt(videoDetails.lengthSeconds);
+      const duration = parseInt(videoDetails.lengthSeconds, 10);
 
       // Add video duration limit (5 minutes max for free tier)
-      const MAX_DURATION = 300; // 5 minutes in seconds
+      const MAX_DURATION = 300; // 5 minutes
       if (duration > MAX_DURATION) {
-        return res.status(400).json({ 
-          error: 'Videos longer than 5 minutes are not supported on the free plan' 
+        return res.status(400).json({
+          error: 'Videos longer than 5 minutes are not supported on the free plan'
         });
       }
 
-      // Create a pass-through stream for more efficient processing
+      // Create a pass-through stream
       const audioStream = ytdl(url, {
         quality: 'highestaudio',
         highWaterMark: 1 << 25 // 32MB buffer
       });
 
-      // Create converter stream
+      // Convert to MP3
       const converter = ffmpeg(audioStream)
         .audioBitrate(128)
         .toFormat('mp3')
-        .on('error', error => {
+        .on('error', (error) => {
           console.error('FFmpeg error:', error);
-          res.status(500).json({ error: 'Conversion failed' });
+          if (!res.headersSent) {
+            res.status(500).json({ error: 'Conversion failed' });
+          }
         });
 
       // Stream directly to response
       res.setHeader('Content-Type', 'audio/mpeg');
-      res.setHeader('Content-Disposition', `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.mp3"`);
-      
-      converter.pipe(res);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${title.replace(/[^a-z0-9]/gi, '_')}.mp3"`
+      );
 
+      converter.pipe(res);
     } catch (error) {
       console.error('Conversion error:', error);
-      res.status(500).json({ error: 'Conversion failed', details: error.message });
+      if (!res.headersSent) {
+        res
+          .status(500)
+          .json({ error: 'Conversion failed', details: error.message });
+      }
     }
   });
-};
+}
