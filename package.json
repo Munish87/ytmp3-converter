@@ -6,9 +6,9 @@
     "node": "18.x"
   },
   "dependencies": {
-    "ytdl-core": "^4.11.5",
-    "fluent-ffmpeg": "^2.1.2",
     "express-rate-limit": "^6.10.0",
-    "ffmpeg-static": "^5.2.0"
+    "ffmpeg-static": "^5.2.0",
+    "fluent-ffmpeg": "^2.1.2",
+    "ytdl-core": "^4.11.5"
   }
 }
